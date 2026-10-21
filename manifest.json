@@ -10,6 +10,7 @@
         "*://*.openedu.ru/*"
       ],
       "js": [
+        "logger.js",
         "content.js"
       ],
       "css": [

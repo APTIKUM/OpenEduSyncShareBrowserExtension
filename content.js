@@ -1,9 +1,11 @@
 (function () {
+  const log = OpenEduLogger.createLogger("Content");
+
   const frameType = window.top === window ? "top" : "iframe";
-  const logPrefix = "[OpenEdu SyncShare][" + frameType + "]";
-  console.log(logPrefix, "Extension started", {
+
+  log.info("Extension started", {
     url: window.location.href,
-    frame: window.top === window ? "top" : "iframe"
+    frame: frameType
   });
 
   const questionGeneralIdPrefix = "problem_";
@@ -91,7 +93,7 @@
     }
 
     if (processedProblems || processedInputs) {
-      console.log(logPrefix, "Processed:", {
+      log.info("Processed questions", {
         problems: processedProblems,
         inputs: processedInputs
       });
@@ -100,12 +102,12 @@
 
   function scanPage(reason) {
     const questions = document.querySelectorAll(questionInputSelector);
-    console.log(logPrefix, "Scanning page:", reason, {
+    log.debug("Scanning page", {
+      reason,
       matches: questions.length,
-      ids: Array.from(questions).map(function (element) {
-        return element.id;
-      })
+      ids: Array.from(questions).map(element => element.id)
     });
+
     processQuestions(document);
   }
 
