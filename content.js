@@ -6,65 +6,100 @@
     frame: window.top === window ? "top" : "iframe"
   });
 
-  const questionIdPrefix = "inputtype_";
-  const questionSelector = `[id^="${questionIdPrefix}"]`;
-  const wrapperClass = "openedu-question-wrapper";
+  const questionGeneralIdPrefix = "problem_";
+  const questionInputIdPrefix = "inputtype_";
+
+  const questionGeneralSelector = `[id^="${questionGeneralIdPrefix}"]`;
+  const questionInputSelector = `[id^="${questionInputIdPrefix}"]`;
+
   const markerAttribute = "data-openedu-question-processed";
 
-  function wrapQuestion(question) {
+  function wrapQuestionGeneral(question) {
     if (
       question.hasAttribute(markerAttribute) ||
-      !question.id.startsWith(questionIdPrefix) ||
-      question.id.length <= questionIdPrefix.length
+      question.id.length <= questionGeneralIdPrefix.length
     ) {
       return false;
     }
 
+    const id = question.id.slice(questionGeneralIdPrefix.length);
     const wrapper = document.createElement("div");
-    const questionIdPart = question.id.slice(questionIdPrefix.length);
     const label = document.createElement("span");
 
-    wrapper.className = wrapperClass;
-    wrapper.dataset.questionId = questionIdPart;
-    label.className = "openedu-question-label";
-    label.textContent = questionIdPart;
-    label.setAttribute("aria-label", "Question ID");
+    wrapper.className = "openedu-question-wrapper general";
+    wrapper.dataset.problemId = id;
+
+    label.className = "openedu-question-label general";
+    label.textContent = id;
+    label.setAttribute("aria-label", "Problem ID");
 
     question.setAttribute(markerAttribute, "true");
     question.parentNode.insertBefore(wrapper, question);
     wrapper.append(label, question);
-    console.log(logPrefix, "Question highlighted:", {
-      element: question,
-      id: question.id,
-      idPart: questionIdPart
-    });
+
+    return true;
+  }
+
+  function wrapQuestionInput(questionInput) {
+    if (
+      questionInput.hasAttribute(markerAttribute) ||
+      questionInput.id.length <= questionInputIdPrefix.length
+    ) {
+      return false;
+    }
+
+    const id = questionInput.id.slice(questionInputIdPrefix.length);
+    const wrapper = document.createElement("div");
+    const label = document.createElement("span");
+
+    wrapper.className = "openedu-question-wrapper input";
+    wrapper.dataset.questionId = id;
+
+    label.className = "openedu-question-label input";
+    label.textContent = id;
+    label.setAttribute("aria-label", "Input ID");
+
+    questionInput.setAttribute(markerAttribute, "true");
+    questionInput.parentNode.insertBefore(wrapper, questionInput);
+    wrapper.append(label, questionInput);
+
     return true;
   }
 
   function processQuestions(root) {
-    let processedCount = 0;
+    let processedProblems = 0;
+    let processedInputs = 0;
 
-    if (root instanceof Element && root.matches(questionSelector)) {
-      if (wrapQuestion(root)) {
-        processedCount += 1;
+    function processElement(element) {
+      if (element.matches(questionGeneralSelector)) {
+        if (wrapQuestionGeneral(element)) processedProblems++;
+      }
+
+      if (element.matches(questionInputSelector)) {
+        if (wrapQuestionInput(element)) processedInputs++;
       }
     }
 
-    if (root.querySelectorAll) {
-      root.querySelectorAll(questionSelector).forEach(function (question) {
-        if (wrapQuestion(question)) {
-          processedCount += 1;
-        }
-      });
+    if (root instanceof Element) {
+      processElement(root);
     }
 
-    if (processedCount > 0) {
-      console.log(logPrefix, "Processed questions:", processedCount);
+    if (root.querySelectorAll) {
+      root.querySelectorAll(
+        `${questionGeneralSelector}, ${questionInputSelector}`
+      ).forEach(processElement);
+    }
+
+    if (processedProblems || processedInputs) {
+      console.log(logPrefix, "Processed:", {
+        problems: processedProblems,
+        inputs: processedInputs
+      });
     }
   }
 
   function scanPage(reason) {
-    const questions = document.querySelectorAll(questionSelector);
+    const questions = document.querySelectorAll(questionInputSelector);
     console.log(logPrefix, "Scanning page:", reason, {
       matches: questions.length,
       ids: Array.from(questions).map(function (element) {
