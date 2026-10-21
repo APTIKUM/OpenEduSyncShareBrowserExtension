@@ -23,3 +23,10 @@
 .openedu-load-answers-button:hover {
   background-color: #dbeafe !important;
 }
+
+.openedu-answer-status {
+  display: block;
+  margin-bottom: 8px;
+  color: #b91c1c;
+  font: 600 15px/18px sans-serif;
+}

@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     try {
       const response = await fetch(
-        "https://localhost:7100/api/answers",
+        "https://localhost:7100/api/answers/query",
         {
           method: "POST",
           headers: {
