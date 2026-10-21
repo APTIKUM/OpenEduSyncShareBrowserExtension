@@ -42,7 +42,7 @@
     return true;
   }
 
-  function wrapQuestionInput(questionInput) {
+  function AddAnswerButtonToQuestionInput(questionInput) {
     if (
       questionInput.hasAttribute(markerAttribute) ||
       questionInput.id.length <= questionInputIdPrefix.length
@@ -51,19 +51,26 @@
     }
 
     const id = questionInput.id.slice(questionInputIdPrefix.length);
+
     const wrapper = document.createElement("div");
-    const label = document.createElement("span");
+    const button = document.createElement("button");
 
     wrapper.className = "openedu-question-wrapper input";
     wrapper.dataset.questionId = id;
 
-    label.className = "openedu-question-label input";
-    label.textContent = id;
-    label.setAttribute("aria-label", "Input ID");
+    button.className = "openedu-load-answers-button";
+    button.type = "button";
+    button.textContent = "Загрузить ответ";
+    button.setAttribute("aria-label", `Загрузить ответы для вопроса ${id}`);
+
+    button.addEventListener("click", () => {
+      alert(`ID вопроса: ${id}`);
+    });
 
     questionInput.setAttribute(markerAttribute, "true");
     questionInput.parentNode.insertBefore(wrapper, questionInput);
-    wrapper.append(label, questionInput);
+
+    wrapper.append(button, questionInput);
 
     return true;
   }
@@ -78,7 +85,7 @@
       }
 
       if (element.matches(questionInputSelector)) {
-        if (wrapQuestionInput(element)) processedInputs++;
+        if (AddAnswerButtonToQuestionInput(element)) processedInputs++;
       }
     }
 
@@ -109,9 +116,50 @@
     });
 
     processQuestions(document);
+
+    void requestAnswers();
   }
 
   scanPage("initial");
+
+  const answers = {};
+
+  async function requestAnswers() {
+    const queries = [
+      ...new Set(
+        Array.from(document.querySelectorAll(questionInputSelector))
+          .filter(element =>
+            element.id.length > questionInputIdPrefix.length
+          )
+          .map(element =>
+            element.id.slice(questionInputIdPrefix.length)
+          )
+      )
+    ];
+
+    if (queries.length === 0) {
+      log.info("No questions found");
+      return;
+    }
+
+    log.info("Requesting answers", queries);
+
+    try {
+      const result = await chrome.runtime.sendMessage({
+        type: "GET_ANSWERS",
+        queries
+      });
+
+      if (!result?.success) {
+        throw new Error(result?.error || "API request failed");
+      }
+
+      Object.assign(answers, result.answers);
+
+    } catch (error) {
+      log.error("Failed to get answers", error);
+    }
+  }
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {

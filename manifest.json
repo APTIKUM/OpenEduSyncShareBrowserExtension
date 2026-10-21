@@ -3,6 +3,12 @@
   "name": "OpenEdu SyncShare",
   "version": "1.0.0",
   "description": "Highlights OpenEdu problem elements and displays their IDs.",
+  "host_permissions": [
+    "https://localhost:7100/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [

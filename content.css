@@ -8,3 +8,18 @@
   background: #ffffff;
   font: 600 15px/18px sans-serif;
 }
+
+.openedu-load-answers-button {
+  margin-bottom: 8px;
+  padding: 5px 10px;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 2px solid #2563eb59 !important;
+  border-radius: 4px;
+  cursor: pointer;
+  font: 600 15px/18px sans-serif;
+}
+
+.openedu-load-answers-button:hover {
+  background-color: #dbeafe !important;
+}
