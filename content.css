@@ -1,0 +1,17 @@
+.openedu-problem-wrapper {
+  position: relative;
+  margin: 6px 0;
+  padding: 18px 6px 6px;
+  border: 1px solid rgb(37 99 235 / 35%);
+  border-radius: 6px;
+}
+
+.openedu-problem-label {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  padding: 0 4px;
+  color: #2563eb;
+  background: #ffffff;
+  font: 600 15px/18px sans-serif;
+}

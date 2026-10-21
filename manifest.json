@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "OpenEdu SyncShare",
+  "version": "1.0.0",
+  "description": "Highlights OpenEdu problem elements and displays their IDs.",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://openedu.ru/*",
+        "*://*.openedu.ru/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "all_frames": true,
+      "match_about_blank": true,
+      "match_origin_as_fallback": true,
+      "run_at": "document_idle"
+    }
+  ]
+}
