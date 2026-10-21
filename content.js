@@ -6,71 +6,72 @@
     frame: window.top === window ? "top" : "iframe"
   });
 
-  const problemSelector = '[id^="problem_"]';
-  const wrapperClass = "openedu-problem-wrapper";
-  const markerAttribute = "data-openedu-problem-processed";
+  const questionIdPrefix = "inputtype_";
+  const questionSelector = `[id^="${questionIdPrefix}"]`;
+  const wrapperClass = "openedu-question-wrapper";
+  const markerAttribute = "data-openedu-question-processed";
 
-  function wrapProblem(problem) {
+  function wrapQuestion(question) {
     if (
-      problem.hasAttribute(markerAttribute) ||
-      !problem.id.startsWith("problem_") ||
-      problem.id.length <= "problem_".length
+      question.hasAttribute(markerAttribute) ||
+      !question.id.startsWith(questionIdPrefix) ||
+      question.id.length <= questionIdPrefix.length
     ) {
       return false;
     }
 
     const wrapper = document.createElement("div");
-    const problemIdPart = problem.id.slice("problem_".length);
+    const questionIdPart = question.id.slice(questionIdPrefix.length);
     const label = document.createElement("span");
 
     wrapper.className = wrapperClass;
-    wrapper.dataset.problemId = problemIdPart;
-    label.className = "openedu-problem-label";
-    label.textContent = problemIdPart;
-    label.setAttribute("aria-label", "Problem ID");
+    wrapper.dataset.questionId = questionIdPart;
+    label.className = "openedu-question-label";
+    label.textContent = questionIdPart;
+    label.setAttribute("aria-label", "Question ID");
 
-    problem.setAttribute(markerAttribute, "true");
-    problem.parentNode.insertBefore(wrapper, problem);
-    wrapper.append(label, problem);
-    console.log(logPrefix, "Problem highlighted:", {
-      element: problem,
-      id: problem.id,
-      idPart: problemIdPart
+    question.setAttribute(markerAttribute, "true");
+    question.parentNode.insertBefore(wrapper, question);
+    wrapper.append(label, question);
+    console.log(logPrefix, "Question highlighted:", {
+      element: question,
+      id: question.id,
+      idPart: questionIdPart
     });
     return true;
   }
 
-  function processProblems(root) {
+  function processQuestions(root) {
     let processedCount = 0;
 
-    if (root instanceof Element && root.matches(problemSelector)) {
-      if (wrapProblem(root)) {
+    if (root instanceof Element && root.matches(questionSelector)) {
+      if (wrapQuestion(root)) {
         processedCount += 1;
       }
     }
 
     if (root.querySelectorAll) {
-      root.querySelectorAll(problemSelector).forEach(function (problem) {
-        if (wrapProblem(problem)) {
+      root.querySelectorAll(questionSelector).forEach(function (question) {
+        if (wrapQuestion(question)) {
           processedCount += 1;
         }
       });
     }
 
     if (processedCount > 0) {
-      console.log(logPrefix, "Processed problems:", processedCount);
+      console.log(logPrefix, "Processed questions:", processedCount);
     }
   }
 
   function scanPage(reason) {
-    const problems = document.querySelectorAll(problemSelector);
+    const questions = document.querySelectorAll(questionSelector);
     console.log(logPrefix, "Scanning page:", reason, {
-      matches: problems.length,
-      ids: Array.from(problems).map(function (element) {
+      matches: questions.length,
+      ids: Array.from(questions).map(function (element) {
         return element.id;
       })
     });
-    processProblems(document);
+    processQuestions(document);
   }
 
   scanPage("initial");
@@ -79,7 +80,7 @@
     for (const mutation of mutations) {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
-          processProblems(node);
+          processQuestions(node);
         }
       });
     }

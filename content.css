@@ -1,4 +1,4 @@
-.openedu-problem-wrapper {
+.openedu-question-wrapper {
   position: relative;
   margin: 6px 0;
   padding: 18px 6px 6px;
@@ -6,7 +6,7 @@
   border-radius: 6px;
 }
 
-.openedu-problem-label {
+.openedu-question-label {
   position: absolute;
   top: 0;
   left: 8px;
