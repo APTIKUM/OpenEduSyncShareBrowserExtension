@@ -60,15 +60,152 @@
     return parsedBody;
   }
 
+  function getInputKey(name) {
+    const key = name.endsWith("[]") ? name.slice(0, -2) : name;
+    return key.startsWith("input_") ? key.slice("input_".length) : key;
+  }
+
+  function getCorrectChoice(input, documentFragment) {
+    const label = Array.from(
+      documentFragment.querySelectorAll("label")
+    ).find(candidate => candidate.htmlFor === input.id);
+
+    return label?.classList.contains("choicegroup_correct") === true;
+  }
+
+  function getWrongAnswers(input) {
+    const container = input.closest(".capa_inputtype");
+    const wrongAnswers = new Set();
+
+    container?.querySelectorAll(".message").forEach(message => {
+      try {
+        const details = JSON.parse(message.textContent);
+
+        if (Array.isArray(details.wrong_answers)) {
+          details.wrong_answers.forEach(answer => {
+            wrongAnswers.add(String(answer));
+          });
+        }
+      } catch {
+        // The message is not necessarily JSON.
+      }
+    });
+
+    return wrongAnswers;
+  }
+
+  function removeWrongAnswers(answer, wrongAnswers) {
+    if (
+      answer == null ||
+      typeof answer !== "object"
+    ) {
+      return answer;
+    }
+
+    if (Array.isArray(answer)) {
+      return answer
+        .filter(value => !wrongAnswers.has(String(value)))
+        .map(value => removeWrongAnswers(value, wrongAnswers));
+    }
+
+    return Object.fromEntries(
+      Object.entries(answer)
+        .filter(([key]) => !wrongAnswers.has(key))
+        .map(([key, value]) => [key, removeWrongAnswers(value, wrongAnswers)])
+    );
+  }
+
+  function getCorrectRequestBody(responseBody, requestBody) {
+    if (
+      typeof responseBody?.contents !== "string" ||
+      requestBody == null ||
+      typeof requestBody !== "object" ||
+      Array.isArray(requestBody)
+    ) {
+      return requestBody;
+    }
+
+    const documentFragment = new DOMParser().parseFromString(
+      responseBody.contents,
+      "text/html"
+    );
+    const correctBody = {};
+    const choiceValues = new Map();
+
+    documentFragment.querySelectorAll("input[name]").forEach(input => {
+      const key = getInputKey(input.name);
+
+      if (!Object.prototype.hasOwnProperty.call(requestBody, key)) {
+        return;
+      }
+
+      if (input.type === "checkbox" || input.type === "radio") {
+        if (!getCorrectChoice(input, documentFragment)) {
+          return;
+        }
+
+        if (!choiceValues.has(key)) {
+          choiceValues.set(key, []);
+        }
+
+        choiceValues.get(key).push(input.value);
+        return;
+      }
+
+      if (input.type !== "text") {
+        return;
+      }
+
+      const wrongAnswers = getWrongAnswers(input);
+      const answer = requestBody[key];
+      let parsedAnswer = answer;
+
+      if (typeof answer === "string") {
+        try {
+          parsedAnswer = JSON.parse(answer);
+        } catch {
+          // Keep regular text answers as strings.
+        }
+      }
+
+      const status = input.closest(".capa_inputtype")?.querySelector(".status");
+      if (status?.classList.contains("incorrect")) {
+        return;
+      }
+
+      correctBody[key] = removeWrongAnswers(parsedAnswer, wrongAnswers);
+    });
+
+    choiceValues.forEach((values, key) => {
+      correctBody[key] = requestBody[key] instanceof Array
+        ? values
+        : values[0];
+    });
+
+    if (Object.prototype.hasOwnProperty.call(requestBody, "problem_id")) {
+      correctBody.problem_id = requestBody.problem_id;
+    }
+
+    return correctBody;
+  }
+
   function notifyIfCorrect(url, responseBody, requestBody) {
-    if (responseBody?.success !== "correct") {
+    if (typeof responseBody?.contents !== "string") {
+      return;
+    }
+
+    const correctRequestBody = getCorrectRequestBody(responseBody, requestBody);
+    const answerKeys = correctRequestBody &&
+      Object.keys(correctRequestBody).filter(key => key !== "problem_id");
+
+    if (!answerKeys || answerKeys.length === 0) {
       return;
     }
 
     window.dispatchEvent(new CustomEvent("openedu-problem-check", {
       detail: {
         url,
-        body: requestBody
+        body: correctRequestBody
       }
     }));
   }
