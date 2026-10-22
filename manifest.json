@@ -26,6 +26,20 @@
       "match_about_blank": true,
       "match_origin_as_fallback": true,
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://openedu.ru/*",
+        "*://*.openedu.ru/*"
+      ],
+      "js": [
+        "problem-check-observer.js"
+      ],
+      "all_frames": true,
+      "match_about_blank": true,
+      "match_origin_as_fallback": true,
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ]
 }

@@ -8,6 +8,18 @@
     frame: frameType
   });
 
+  window.addEventListener("openedu-problem-check", event => {
+    log.info("Correct problem_check response received", event.detail);
+
+    chrome.runtime.sendMessage({
+      type: "PROBLEM_CHECK_CORRECT",
+      url: event.detail?.url,
+      body: event.detail?.body
+    }).catch(error => {
+      log.error("Failed to notify background about problem_check", error);
+    });
+  });
+
   const questionGeneralIdPrefix = "problem_";
   const questionInputIdPrefix = "inputtype_";
 
@@ -237,7 +249,7 @@
       return;
     }
 
-    log.info("Requesting answers", queries);
+    // log.info("Requesting answers", queries);
 
     try {
       const result = await chrome.runtime.sendMessage({
