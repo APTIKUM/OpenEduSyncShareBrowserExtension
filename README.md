@@ -1,14 +1,18 @@
-# OpenEdu Problem Highlighter
+# OpenEdu SyncShare
 
-A minimal Chrome extension that finds `div` elements whose IDs start with
-`problem_` on [openedu.ru](https://apps.openedu.ru/).
+Chrome extension for [OpenEdu](https://openedu.ru/) that adds problem IDs to
+the page and helps load previously saved answers.
 
-Each matching element is wrapped in a subtle border. The part of its ID after
-`problem_` is shown as a small label above the element.
+For each question, the extension shows the part of its ID after `problem_` or
+`input_` and adds a button for loading a saved answer. Answers are requested
+from the local API at `https://localhost:7100/api/answers/query`.
 
-The extension also monitors `problem_check` responses. It parses the returned
-`contents` HTML and sends only correct answers to the local API endpoint
-`/api/answers/set`, including correct choices from partially correct responses.
+The extension also monitors `problem_check` responses, extracts correct answers
+from the returned data, and sends them to
+`https://localhost:7100/api/answers/set`. This includes correct choices from
+partially correct responses.
+
+Press **Escape** to hide or show the IDs, answer buttons, and answer statuses.
 
 ## Install locally
 
