@@ -31,14 +31,6 @@
 
       try {
         parsedValue = JSON.parse(value);
-        if (
-          parsedValue &&
-          typeof parsedValue === "object" &&
-          !Array.isArray(parsedValue) &&
-          Object.hasOwn(parsedValue, "answer")
-        ) {
-          parsedValue = parsedValue.answer;
-        }
       } catch {
         // Keep regular form values as strings.
       }

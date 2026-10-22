@@ -25,8 +25,157 @@
 
   const questionGeneralSelector = `[id^="${questionGeneralIdPrefix}"]`;
   const questionInputSelector = `[id^="${questionInputIdPrefix}"]`;
+  const matchingTableSelector = '[data-type="MatchingTableVueApp"]';
 
   const markerAttribute = "data-openedu-question-processed";
+
+  function isVisible(element) {
+    if (element.hidden || element.getClientRects().length === 0) {
+      return false;
+    }
+
+    let current = element;
+
+    while (current instanceof Element) {
+      const styles = window.getComputedStyle(current);
+
+      if (
+        styles.display === "none" ||
+        styles.visibility === "hidden" ||
+        styles.visibility === "collapse" ||
+        styles.opacity === "0"
+      ) {
+        return false;
+      }
+
+      if (current.hidden) {
+        return false;
+      }
+
+      current = current.parentElement;
+    }
+
+    return true;
+  }
+
+  function getAnswerButtonTarget(questionInput) {
+    const matchingTable = questionInput.closest(matchingTableSelector);
+
+    if (!isVisible(questionInput) && matchingTable && isVisible(matchingTable)) {
+      return matchingTable;
+    }
+
+    if (isVisible(questionInput)) {
+      return questionInput;
+    }
+
+    let visibleAncestor = null;
+    let current = questionInput.parentElement;
+
+    while (current) {
+      if (isVisible(current)) {
+        if (!visibleAncestor) {
+          visibleAncestor = current;
+        }
+
+        if (current.matches(matchingTableSelector)) {
+          return current;
+        }
+      }
+
+      current = current.parentElement;
+    }
+
+    return visibleAncestor || questionInput;
+  }
+
+  function moveMatchingTableAnswerElements(answer, questionId) {
+    const matchingAnswer = answer?.answer;
+
+    log.info("Processing matching table element moves", {
+      questionId,
+      answer,
+      matchingAnswer
+    });
+
+    if (
+      matchingAnswer == null ||
+      typeof matchingAnswer !== "object" ||
+      Array.isArray(matchingAnswer)
+    ) {
+      log.warn("Matching table answer has no movable answer object", {
+        questionId,
+        answer
+      });
+      return;
+    }
+
+    Object.entries(matchingAnswer).forEach(([targetId, sourceIds]) => {
+      const targetElement = document.getElementById(targetId);
+
+      log.info("Matching table target lookup", {
+        questionId,
+        targetId,
+        targetFound: Boolean(targetElement),
+        sourceIds
+      });
+
+      if (!targetElement || !Array.isArray(sourceIds)) {
+        log.warn("Matching table target or source IDs not found", {
+          questionId,
+          targetId
+        });
+        return;
+      }
+
+      sourceIds.forEach(sourceId => {
+        const sourceElementId = String(sourceId);
+        const sourceElement = document.getElementById(sourceElementId);
+
+        log.info("Matching table source lookup", {
+          questionId,
+          targetId,
+          sourceId: sourceElementId,
+          sourceFound: Boolean(sourceElement)
+        });
+
+        if (!sourceElement) {
+          log.warn("Matching table source element not found", {
+            questionId,
+            targetId,
+            sourceId: sourceElementId
+          });
+          return;
+        }
+
+        if (
+          sourceElement === targetElement ||
+          sourceElement.contains(targetElement)
+        ) {
+          log.warn("Skipped invalid matching table element move", {
+            questionId,
+            targetId,
+            sourceId: sourceElementId
+          });
+          return;
+        }
+
+        log.info("Moving matching table element", {
+          questionId,
+          sourceId: sourceElementId,
+          targetId,
+          sourceParentId: sourceElement.parentElement?.id || null
+        });
+        targetElement.append(sourceElement);
+        log.info("Moved matching table element", {
+          questionId,
+          sourceId: sourceElementId,
+          targetId,
+          newParentId: sourceElement.parentElement?.id || null
+        });
+      });
+    });
+  }
 
   function wrapQuestionGeneral(question) {
     if (
@@ -67,6 +216,19 @@
     const wrapper = document.createElement("div");
     const button = document.createElement("button");
     const answerStatus = document.createElement("span");
+    const wrapperTarget = getAnswerButtonTarget(questionInput);
+    const matchingTable = questionInput.closest(matchingTableSelector);
+    const matchingTableTarget = wrapperTarget.matches(matchingTableSelector)
+      ? wrapperTarget
+      : matchingTable;
+    const isMatchingTableQuestion = Boolean(matchingTableTarget);
+
+    log.info("Answer button target detected", {
+      questionId: id,
+      isMatchingTableQuestion,
+      questionInputId: questionInput.id,
+      matchingTableId: matchingTableTarget?.id || null
+    });
 
     wrapper.className = "openedu-question-wrapper input";
     wrapper.dataset.questionId = id;
@@ -82,17 +244,83 @@
     button.addEventListener("click", () => {
       const answer = answers[id];
 
+      console.info("[OpenEdu SyncShare] Answer button clicked", {
+        questionId: id,
+        isMatchingTableQuestion,
+        matchingTableId: matchingTableTarget?.id || null,
+        answer
+      });
+
       if (answer == null) {
         answerStatus.textContent = "Ответ не найден :(";
         log.warn("Answer not found", { questionId: id });
         return;
       }
 
+      const isMatchingAnswer = answer?.answer &&
+        typeof answer.answer === "object" &&
+        !Array.isArray(answer.answer);
+
+      console.info("[OpenEdu SyncShare] Answer format detected", {
+        questionId: id,
+        isMatchingTableQuestion,
+        isMatchingAnswer,
+        answerType: typeof answer
+      });
+
+      if (isMatchingTableQuestion || isMatchingAnswer) {
+        log.info("Loading matching table answer", {
+          questionId: id,
+          answer
+        });
+        let serializedAnswer;
+
+        try {
+          serializedAnswer = JSON.stringify(answer);
+        } catch (error) {
+          answerStatus.textContent = "Не удалось подготовить ответ :(";
+          log.error("Failed to serialize matching table answer", {
+            questionId: id,
+            error
+          });
+          return;
+        }
+
+        const answerContainer = matchingTableTarget || questionInput;
+        const answerField = answerContainer.matches("input, textarea")
+          ? answerContainer
+          : answerContainer.querySelector(
+            'input[type="hidden"], textarea, input[type="text"]'
+          );
+
+        if (!answerField) {
+          answerStatus.textContent = "Поле ответа не найдено :(";
+          log.warn("Matching table answer field not found", {
+            questionId: id
+          });
+          return;
+        }
+
+        answerStatus.textContent = "";
+        answerField.value = serializedAnswer;
+        answerField.dispatchEvent(new Event("input", { bubbles: true }));
+        answerField.dispatchEvent(new Event("change", { bubbles: true }));
+        moveMatchingTableAnswerElements(answer, id);
+        return;
+      }
+
       const textInput = questionInput.querySelector('input[type="text"]');
 
       if (textInput) {
+        console.info("[OpenEdu SyncShare] Using regular text answer field", {
+          questionId: id,
+          inputId: textInput.id,
+          answerType: typeof answer
+        });
         answerStatus.textContent = "";
-        textInput.value = String(answer);
+        textInput.value = typeof answer === "object"
+          ? JSON.stringify(answer)
+          : String(answer);
         textInput.dispatchEvent(new Event("input", { bubbles: true }));
         textInput.dispatchEvent(new Event("change", { bubbles: true }));
         return;
@@ -148,10 +376,11 @@
     });
 
     questionInput.setAttribute(markerAttribute, "true");
-    questionInput.parentNode.insertBefore(wrapper, questionInput);
+    wrapperTarget.parentNode.insertBefore(wrapper, wrapperTarget);
 
-    wrapper.append(button, answerStatus, questionInput);
+    wrapper.append(button, answerStatus, wrapperTarget);
 
+    log.info("Added answer button to question input", { questionId: id });
     return true;
   }
 
@@ -160,9 +389,9 @@
     let processedInputs = 0;
 
     function processElement(element) {
-      // if (element.matches(questionGeneralSelector)) {
-      //   if (wrapQuestionGeneral(element)) processedProblems++;
-      // }
+      if (element.matches(questionGeneralSelector)) {
+        if (wrapQuestionGeneral(element)) processedProblems++;
+      }
 
       if (element.matches(questionInputSelector)) {
         if (AddAnswerButtonToQuestionInput(element)) processedInputs++;
@@ -257,7 +486,7 @@
       return;
     }
 
-    // log.info("Requesting answers", queries);
+    log.info("Requesting answers", queries);
 
     try {
       const result = await chrome.runtime.sendMessage({
