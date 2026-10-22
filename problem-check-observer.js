@@ -27,13 +27,30 @@
       const key = keyWithoutArray.startsWith("input_")
         ? keyWithoutArray.slice("input_".length)
         : keyWithoutArray;
+      let parsedValue = value;
+
+      try {
+        parsedValue = JSON.parse(value);
+        if (
+          parsedValue &&
+          typeof parsedValue === "object" &&
+          !Array.isArray(parsedValue) &&
+          Object.hasOwn(parsedValue, "answer")
+        ) {
+          parsedValue = parsedValue.answer;
+        }
+      } catch {
+        // Keep regular form values as strings.
+      }
 
       if (isMultipleValue) {
-        parsedBody[key] = parsedBody[key]
-          ? `${parsedBody[key]}&${value}`
-          : value;
+        if (!Array.isArray(parsedBody[key])) {
+          parsedBody[key] = [];
+        }
+
+        parsedBody[key].push(parsedValue);
       } else {
-        parsedBody[key] = value;
+        parsedBody[key] = parsedValue;
       }
     }
 

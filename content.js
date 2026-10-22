@@ -126,9 +126,7 @@
       );
 
       if (checkboxInputs.length > 0) {
-        const selectedValues = new Set(
-          String(answer).split("&").map(value => value.trim())
-        );
+        const selectedValues = new Set(getAnswerValues(answer));
 
         checkboxInputs.forEach(input => {
           const checked = selectedValues.has(input.value);
@@ -205,6 +203,16 @@
   scanPage("initial");
 
   const answers = {};
+
+  function getAnswerValues(answer) {
+    if (Array.isArray(answer)) {
+      return answer.map(value => String(value));
+    }
+
+    return String(answer)
+      .split("&")
+      .map(value => value.trim());
+  }
 
   function updateAnswerControls() {
     document.querySelectorAll(".openedu-question-wrapper.input").forEach(
