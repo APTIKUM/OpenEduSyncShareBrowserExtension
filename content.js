@@ -28,6 +28,28 @@
   const matchingTableSelector = '[data-type="MatchingTableVueApp"]';
 
   const markerAttribute = "data-openedu-question-processed";
+  const addedElementsSelector = [
+    ".openedu-question-label",
+    ".openedu-load-answers-button",
+    ".openedu-answer-status"
+  ].join(", ");
+  const addedElementsVisibilityStorageKey = "openedu-added-elements-hidden";
+  let addedElementsHidden = localStorage.getItem(
+    addedElementsVisibilityStorageKey
+  ) === "true";
+
+  function setAddedElementsVisibility(hidden) {
+    addedElementsHidden = hidden;
+    localStorage.setItem(
+      addedElementsVisibilityStorageKey,
+      String(hidden)
+    );
+    updateAnswerControls();
+
+    document.querySelectorAll(".openedu-question-label").forEach(label => {
+      label.hidden = hidden;
+    });
+  }
 
   function isVisible(element) {
     if (element.hidden || element.getClientRects().length === 0) {
@@ -195,6 +217,7 @@
     label.className = "openedu-question-label general";
     label.textContent = id;
     label.setAttribute("aria-label", "Problem ID");
+    label.hidden = addedElementsHidden;
 
     question.setAttribute(markerAttribute, "true");
     question.parentNode.insertBefore(wrapper, question);
@@ -240,6 +263,7 @@
     button.setAttribute("aria-label", `Загрузить ответы для вопроса ${id}`);
 
     answerStatus.className = "openedu-answer-status";
+    answerStatus.hidden = addedElementsHidden;
 
     button.addEventListener("click", () => {
       const answer = answers[id];
@@ -389,9 +413,9 @@
     let processedInputs = 0;
 
     function processElement(element) {
-      if (element.matches(questionGeneralSelector)) {
-        if (wrapQuestionGeneral(element)) processedProblems++;
-      }
+      // if (element.matches(questionGeneralSelector)) {
+      //   if (wrapQuestionGeneral(element)) processedProblems++;
+      // }
 
       if (element.matches(questionInputSelector)) {
         if (AddAnswerButtonToQuestionInput(element)) processedInputs++;
@@ -459,10 +483,11 @@
         if (answers[questionId] == null) {
           button.hidden = true;
           answerStatus.textContent = "Ответ не найден :(";
+          answerStatus.hidden = addedElementsHidden;
           return;
         }
 
-        button.hidden = false;
+        button.hidden = addedElementsHidden;
         answerStatus.hidden = true;
       }
     );
@@ -505,6 +530,12 @@
       log.error("Failed to get answers", error);
     }
   }
+
+  window.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      setAddedElementsVisibility(!addedElementsHidden);
+    }
+  });
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
