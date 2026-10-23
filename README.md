@@ -1,23 +1,22 @@
 # OpenEdu SyncShare
 
-Chrome extension for [OpenEdu](https://openedu.ru/) that adds problem IDs to
-the page and helps load previously saved answers.
+## Как это работает
 
-For each question, the extension shows the part of its ID after `problem_` or
-`input_` and adds a button for loading a saved answer. Answers are requested
-from the local API at `https://localhost:7100/api/answers/query`.
+Расширение помогает быстрее проходить тесты на [OpenEdu](https://openedu.ru/).
 
-The extension also monitors `problem_check` responses and sends answers to
-`https://localhost:7100/api/answers/set`. When the response reports a full
-score, the submitted answers are saved as correct. For partially correct
-responses, correct answers are extracted from the returned data.
+1. Откройте нужное задание на OpenEdu.
+2. Если ответ есть в базе, рядом с вопросом появится кнопка **«Загрузить ответ»**. Нажмите её, чтобы подставить ответ в форму.
+3. Если ответа в базе нет, появится сообщение **«Ответ не найден»**. Решите задание самостоятельно и отправьте его на проверку.
+4. Если отправленный ответ окажется правильным, он запишется в базу и станет доступен при следующем обращении к этому вопросу.
 
-Press **Escape** to hide or show the IDs, answer buttons, and answer statuses.
+Сохранённые ответы находятся в общей базе. Их могут просматривать и загружать другие пользователи расширения.
 
-## Install locally
+Расширение работает с текстовыми полями, вариантами ответа, флажками и таблицами соответствий. Его отображение можно скрыть или снова показать клавишей **Esc**.
 
-1. Open `chrome://extensions` in Chrome.
-2. Turn on **Developer mode**.
-3. Click **Load unpacked**.
-4. Select this project folder.
-5. Open or refresh [openedu.ru](https://openedu.ru/).
+## Как установить локально
+
+1. Откройте в Chrome страницу `chrome://extensions`.
+2. Включите **Режим разработчика**.
+3. Нажмите **Загрузить распакованное расширение**.
+4. Выберите папку с этим проектом.
+5. Откройте или обновите страницу с тестом на [OpenEdu](https://openedu.ru/).
