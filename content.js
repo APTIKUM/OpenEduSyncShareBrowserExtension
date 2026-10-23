@@ -21,7 +21,11 @@
   });
 
   const questionGeneralIdPrefix = "problem_";
-  const questionInputIdPrefixes = ["inputtype_", "formulaequationinput_"];
+  const questionInputIdPrefixes = [
+    "input_",
+    "inputtype_",
+    "formulaequationinput_"
+  ];
 
   const questionGeneralSelector = `[id^="${questionGeneralIdPrefix}"]`;
   const questionInputSelector = questionInputIdPrefixes
@@ -45,9 +49,80 @@
       questionInput.id.startsWith(candidate)
     );
 
-    return prefix && questionInput.id.length > prefix.length
-      ? questionInput.id.slice(prefix.length)
-      : null;
+    if (!prefix || questionInput.id.length <= prefix.length) {
+      return null;
+    }
+
+    const questionId = questionInput.id.slice(prefix.length);
+
+    return questionId.split("_").length === 3 ? questionId : null;
+  }
+
+  function isPreferredQuestionInput(questionInput) {
+    return questionInput.id.startsWith("input_");
+  }
+
+  function findPreferredQuestionInput(questionId) {
+    return Array.from(document.querySelectorAll(questionInputSelector))
+      .find(questionInput =>
+        isPreferredQuestionInput(questionInput) &&
+        getQuestionInputId(questionInput) === questionId
+      ) || null;
+  }
+
+  function removeAnswerButtonWrapper(questionInput) {
+    const wrapper = Array.from(document.querySelectorAll(
+      ".openedu-question-wrapper.input[data-question-input-id]"
+    )).find(candidate =>
+      candidate.dataset.questionInputId === questionInput.id
+    );
+
+    if (!wrapper) {
+      return;
+    }
+
+    const wrapperTarget = wrapper.lastElementChild;
+
+    if (wrapperTarget) {
+      wrapper.replaceWith(wrapperTarget);
+    } else {
+      wrapper.remove();
+    }
+
+    questionInput.removeAttribute(markerAttribute);
+  }
+
+  function removeDuplicateAnswerButtons(questionInput, questionId) {
+    const preferredInput = isPreferredQuestionInput(questionInput)
+      ? questionInput
+      : findPreferredQuestionInput(questionId);
+
+    if (!preferredInput) {
+      return;
+    }
+
+    document.querySelectorAll(
+      ".openedu-question-wrapper.input[data-question-id]"
+    ).forEach(wrapper => {
+      if (
+        wrapper.dataset.questionId === questionId &&
+        wrapper.dataset.questionInputId !== preferredInput.id
+      ) {
+        const duplicateInput = document.getElementById(
+          wrapper.dataset.questionInputId
+        );
+
+        if (duplicateInput) {
+          removeAnswerButtonWrapper(duplicateInput);
+        } else {
+          wrapper.remove();
+        }
+      }
+    });
+  }
+
+  function getAnswerInput(questionInput, questionId) {
+    return findPreferredQuestionInput(questionId) || questionInput;
   }
 
   function setAddedElementsVisibility(hidden) {
@@ -295,6 +370,14 @@
       return false;
     }
 
+    if (
+      !isPreferredQuestionInput(questionInput) &&
+      findPreferredQuestionInput(id)
+    ) {
+      removeAnswerButtonWrapper(questionInput);
+      return false;
+    }
+
     const wrapper = document.createElement("div");
     const button = document.createElement("button");
     const answerStatus = document.createElement("span");
@@ -314,6 +397,7 @@
 
     wrapper.className = "openedu-question-wrapper input";
     wrapper.dataset.questionId = id;
+    wrapper.dataset.questionInputId = questionInput.id;
 
     button.className = "openedu-load-answers-button";
     button.type = "button";
@@ -374,7 +458,8 @@
           return;
         }
 
-        const answerContainer = currentMatchingTableTarget || questionInput;
+        const answerContainer = currentMatchingTableTarget ||
+          getAnswerInput(questionInput, id);
         const answerField = answerContainer.matches("input, textarea")
           ? answerContainer
           : answerContainer.querySelector(
@@ -411,7 +496,10 @@
         return;
       }
 
-      const textInput = questionInput.querySelector('input[type="text"]');
+      const answerInput = getAnswerInput(questionInput, id);
+      const textInput = answerInput.matches('input[type="text"], textarea')
+        ? answerInput
+        : answerInput.querySelector('input[type="text"], textarea');
 
       if (textInput) {
         console.info("[OpenEdu SyncShare] Using regular text answer field", {
@@ -482,6 +570,7 @@
 
     wrapper.append(button, answerStatus, wrapperTarget);
 
+    removeDuplicateAnswerButtons(questionInput, id);
     log.info("Added answer button to question input", { questionId: id });
     return true;
   }

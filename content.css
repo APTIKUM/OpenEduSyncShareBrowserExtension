@@ -3,6 +3,12 @@
   border: 0px solid #2563eb59;
 }
 
+.openedu-question-wrapper.input {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .openedu-question-label {
   color: #2563eb;
   background: #ffffff;
