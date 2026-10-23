@@ -21,10 +21,12 @@
   });
 
   const questionGeneralIdPrefix = "problem_";
-  const questionInputIdPrefix = "inputtype_";
+  const questionInputIdPrefixes = ["inputtype_", "formulaequationinput_"];
 
   const questionGeneralSelector = `[id^="${questionGeneralIdPrefix}"]`;
-  const questionInputSelector = `[id^="${questionInputIdPrefix}"]`;
+  const questionInputSelector = questionInputIdPrefixes
+    .map(prefix => `[id^="${prefix}"]`)
+    .join(", ");
   const matchingTableSelector = '[data-type="MatchingTableVueApp"]';
 
   const markerAttribute = "data-openedu-question-processed";
@@ -37,6 +39,16 @@
   let addedElementsHidden = localStorage.getItem(
     addedElementsVisibilityStorageKey
   ) === "true";
+
+  function getQuestionInputId(questionInput) {
+    const prefix = questionInputIdPrefixes.find(candidate =>
+      questionInput.id.startsWith(candidate)
+    );
+
+    return prefix && questionInput.id.length > prefix.length
+      ? questionInput.id.slice(prefix.length)
+      : null;
+  }
 
   function setAddedElementsVisibility(hidden) {
     addedElementsHidden = hidden;
@@ -227,14 +239,15 @@
   }
 
   function AddAnswerButtonToQuestionInput(questionInput) {
-    if (
-      questionInput.hasAttribute(markerAttribute) ||
-      questionInput.id.length <= questionInputIdPrefix.length
-    ) {
+    if (questionInput.hasAttribute(markerAttribute)) {
       return false;
     }
 
-    const id = questionInput.id.slice(questionInputIdPrefix.length);
+    const id = getQuestionInputId(questionInput);
+
+    if (!id) {
+      return false;
+    }
 
     const wrapper = document.createElement("div");
     const button = document.createElement("button");
@@ -497,12 +510,8 @@
     const queries = [
       ...new Set(
         Array.from(document.querySelectorAll(questionInputSelector))
-          .filter(element =>
-            element.id.length > questionInputIdPrefix.length
-          )
-          .map(element =>
-            element.id.slice(questionInputIdPrefix.length)
-          )
+          .map(getQuestionInputId)
+          .filter(Boolean)
       )
     ];
 
