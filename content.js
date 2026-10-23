@@ -508,9 +508,9 @@
 
       if (radioInput) {
         answerStatus.textContent = "";
-        radioInput.checked = true;
-        radioInput.dispatchEvent(new Event("input", { bubbles: true }));
-        radioInput.dispatchEvent(new Event("change", { bubbles: true }));
+        if (!radioInput.checked) {
+          radioInput.click();
+        }
         return;
       }
 
@@ -533,9 +533,7 @@
           const checked = selectedValues.has(input.value);
 
           if (input.checked !== checked) {
-            input.checked = checked;
-            input.dispatchEvent(new Event("input", { bubbles: true }));
-            input.dispatchEvent(new Event("change", { bubbles: true }));
+            input.click();
           }
         });
 
