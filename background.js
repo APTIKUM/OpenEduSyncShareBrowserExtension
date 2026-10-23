@@ -3,7 +3,7 @@ importScripts("logger.js");
 const log = OpenEduLogger.createLogger("Background");
     
 const answers = {};
-const apiBaseUrl = "https://localhost:7100/api";
+const apiBaseUrl = "http://80.71.224.204:8080/api";
 
 log.info("Background script initialized");
 
