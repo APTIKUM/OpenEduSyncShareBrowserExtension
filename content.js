@@ -22,7 +22,9 @@
   const questionInputSelector = questionInputIdPrefixes
     .map(prefix => `[id^="${prefix}"]`)
     .join(", ");
-  const matchingTableSelector = '[data-type="MatchingTableVueApp"]';
+  const matchingTableSelector = "table";
+  const legacyMatchingTableSelector =
+    '[data-type="MatchingTableVueApp"]';
 
   const markerAttribute = "data-openedu-question-processed";
   const addedElementsSelector = [
@@ -116,6 +118,22 @@
     return findPreferredQuestionInput(questionId) || questionInput;
   }
 
+  function findMatchingTable(questionInput) {
+    const containingTable = questionInput.closest(matchingTableSelector);
+
+    if (containingTable) {
+      return containingTable;
+    }
+
+    return questionInput.closest(".problem")
+      ?.querySelector(matchingTableSelector) || null;
+  }
+
+  function getMatchingTableTarget(matchingTable) {
+    return matchingTable?.closest(legacyMatchingTableSelector) ||
+      matchingTable;
+  }
+
   function setAddedElementsVisibility(hidden) {
     addedElementsHidden = hidden;
     localStorage.setItem(
@@ -159,10 +177,15 @@
   }
 
   function getAnswerButtonTarget(questionInput) {
-    const matchingTable = questionInput.closest(matchingTableSelector);
+    const matchingTable = findMatchingTable(questionInput);
+    const matchingTableTarget = getMatchingTableTarget(matchingTable);
 
-    if (!isVisible(questionInput) && matchingTable && isVisible(matchingTable)) {
-      return matchingTable;
+    if (
+      !isVisible(questionInput) &&
+      matchingTableTarget &&
+      isVisible(matchingTableTarget)
+    ) {
+      return matchingTableTarget;
     }
 
     if (isVisible(questionInput)) {
@@ -178,7 +201,10 @@
           visibleAncestor = current;
         }
 
-        if (current.matches(matchingTableSelector)) {
+        if (
+          current.matches(matchingTableSelector) ||
+          current.matches(legacyMatchingTableSelector)
+        ) {
           return current;
         }
       }
@@ -338,8 +364,10 @@
     const button = document.createElement("button");
     const answerStatus = document.createElement("span");
     const wrapperTarget = getAnswerButtonTarget(questionInput);
-    const matchingTable = questionInput.closest(matchingTableSelector);
-    const matchingTableTarget = wrapperTarget.matches(matchingTableSelector)
+    const matchingTable = findMatchingTable(questionInput);
+    const matchingTableTarget = wrapperTarget.matches(
+      `${matchingTableSelector}, ${legacyMatchingTableSelector}`
+    )
       ? wrapperTarget
       : matchingTable;
     const isMatchingTableQuestion = Boolean(matchingTableTarget);
@@ -360,7 +388,7 @@
     button.addEventListener("click", () => {
       const answer = answers[id];
       answerStatus.classList.remove("openedu-answer-status-warning");
-      const currentMatchingTable = questionInput.closest(matchingTableSelector);
+      const currentMatchingTable = findMatchingTable(questionInput);
       const currentMatchingTableTarget = currentMatchingTable || (
         matchingTableTarget?.isConnected ? matchingTableTarget : null
       );
@@ -371,11 +399,7 @@
         return;
       }
 
-      const isMatchingAnswer = answer?.answer &&
-        typeof answer.answer === "object" &&
-        !Array.isArray(answer.answer);
-
-      if (isMatchingTableQuestion || isMatchingAnswer) {
+      if (isMatchingTableQuestion) {
         let serializedAnswer;
 
         try {
@@ -389,13 +413,7 @@
           return;
         }
 
-        const answerContainer = currentMatchingTableTarget ||
-          getAnswerInput(questionInput, id);
-        const answerField = answerContainer.matches("input, textarea")
-          ? answerContainer
-          : answerContainer.querySelector(
-            'input[type="hidden"], textarea, input[type="text"]'
-          );
+        const answerField = getAnswerInput(questionInput, id);
 
         if (!answerField) {
           answerStatus.textContent = "Поле ответа не найдено :(";
