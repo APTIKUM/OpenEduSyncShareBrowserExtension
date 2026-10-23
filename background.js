@@ -5,8 +5,6 @@ const log = OpenEduLogger.createLogger("Background");
 const answers = {};
 const apiBaseUrl = "http://80.71.224.204:8080/api";
 
-log.info("Background script initialized");
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (
     message.type !== "GET_ANSWERS" &&

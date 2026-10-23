@@ -49,17 +49,6 @@
     return parsedBody;
   }
 
-  function logRequestBody(url, body) {
-    const parsedBody = parseRequestBody(body);
-
-    console.info("[OpenEdu SyncShare] problem_check request body:", {
-      url,
-      body: parsedBody
-    });
-
-    return parsedBody;
-  }
-
   function getInputKey(name) {
     const key = name.endsWith("[]") ? name.slice(0, -2) : name;
     return key.startsWith("input_") ? key.slice("input_".length) : key;
@@ -189,12 +178,34 @@
     return correctBody;
   }
 
-  function notifyIfCorrect(url, responseBody, requestBody) {
-    if (typeof responseBody?.contents !== "string") {
-      return;
+  function getAnswersToSave(responseBody, requestBody) {
+    const currentScore = Number(responseBody?.current_score);
+    const totalPossible = Number(responseBody?.total_possible);
+
+    if (
+      Number.isFinite(currentScore) &&
+      Number.isFinite(totalPossible)
+    ) {
+      if (currentScore === totalPossible) {
+        return requestBody;
+      }
+
+      if (currentScore <= 0 || currentScore >= totalPossible) {
+        return null;
+      }
+
+      if (typeof responseBody?.contents !== "string") {
+        return null;
+      }
+    } else if (typeof responseBody?.contents !== "string") {
+      return null;
     }
 
-    const correctRequestBody = getCorrectRequestBody(responseBody, requestBody);
+    return getCorrectRequestBody(responseBody, requestBody);
+  }
+
+  function notifyIfCorrect(url, responseBody, requestBody) {
+    const correctRequestBody = getAnswersToSave(responseBody, requestBody);
     const answerKeys = correctRequestBody &&
       Object.keys(correctRequestBody).filter(key => key !== "problem_id");
 
@@ -228,7 +239,7 @@
     }
 
     const parsedRequestBody = isProblemCheckRequest(requestUrl)
-      ? logRequestBody(requestUrl, requestBody)
+      ? parseRequestBody(requestBody)
       : undefined;
 
     const response = await originalFetch.apply(this, args);
@@ -256,7 +267,7 @@
   XMLHttpRequest.prototype.send = function (...args) {
     const requestUrl = this._openEduRequestUrl || this.responseURL;
     const parsedRequestBody = isProblemCheckRequest(requestUrl)
-      ? logRequestBody(requestUrl, args[0])
+      ? parseRequestBody(args[0])
       : undefined;
 
     this.addEventListener("load", function () {

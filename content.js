@@ -1,16 +1,7 @@
 (function () {
   const log = OpenEduLogger.createLogger("Content");
 
-  const frameType = window.top === window ? "top" : "iframe";
-
-  log.info("Extension started", {
-    url: window.location.href,
-    frame: frameType
-  });
-
   window.addEventListener("openedu-problem-check", event => {
-    log.info("Correct problem_check response received", event.detail);
-
     chrome.runtime.sendMessage({
       type: "PROBLEM_CHECK_CORRECT",
       url: event.detail?.url,
@@ -232,13 +223,6 @@
   ) {
     const matchingAnswer = answer?.answer;
 
-    log.info("Processing matching table element moves", {
-      questionId,
-      matchingTableId: matchingTable?.id || null,
-      answer,
-      matchingAnswer
-    });
-
     if (
       matchingAnswer == null ||
       typeof matchingAnswer !== "object" ||
@@ -261,14 +245,6 @@
     Object.entries(matchingAnswer).forEach(([targetId, sourceIds]) => {
       const targetElement = findMatchingTableElement(matchingTable, targetId);
 
-      log.info("Matching table target lookup", {
-        questionId,
-        targetId,
-        matchingTableId: matchingTable?.id || null,
-        targetFound: Boolean(targetElement),
-        sourceIds
-      });
-
       if (!targetElement || !Array.isArray(sourceIds)) {
         log.warn("Matching table target or source IDs not found", {
           questionId,
@@ -283,14 +259,6 @@
           matchingTable,
           sourceElementId
         );
-
-        log.info("Matching table source lookup", {
-          questionId,
-          targetId,
-          sourceId: sourceElementId,
-          matchingTableId: matchingTable?.id || null,
-          sourceFound: Boolean(sourceElement)
-        });
 
         if (!sourceElement) {
           log.warn("Matching table source element not found", {
@@ -313,19 +281,7 @@
           return;
         }
 
-        log.info("Moving matching table element", {
-          questionId,
-          sourceId: sourceElementId,
-          targetId,
-          sourceParentId: sourceElement.parentElement?.id || null
-        });
         targetElement.append(sourceElement);
-        log.info("Moved matching table element", {
-          questionId,
-          sourceId: sourceElementId,
-          targetId,
-          newParentId: sourceElement.parentElement?.id || null
-        });
       });
     });
 
@@ -388,13 +344,6 @@
       : matchingTable;
     const isMatchingTableQuestion = Boolean(matchingTableTarget);
 
-    log.info("Answer button target detected", {
-      questionId: id,
-      isMatchingTableQuestion,
-      questionInputId: questionInput.id,
-      matchingTableId: matchingTableTarget?.id || null
-    });
-
     wrapper.className = "openedu-question-wrapper input";
     wrapper.dataset.questionId = id;
     wrapper.dataset.questionInputId = questionInput.id;
@@ -416,13 +365,6 @@
         matchingTableTarget?.isConnected ? matchingTableTarget : null
       );
 
-      console.info("[OpenEdu SyncShare] Answer button clicked", {
-        questionId: id,
-        isMatchingTableQuestion,
-        matchingTableId: currentMatchingTableTarget?.id || null,
-        answer
-      });
-
       if (answer == null) {
         answerStatus.textContent = "Ответ не найден :(";
         log.warn("Answer not found", { questionId: id });
@@ -433,18 +375,7 @@
         typeof answer.answer === "object" &&
         !Array.isArray(answer.answer);
 
-      console.info("[OpenEdu SyncShare] Answer format detected", {
-        questionId: id,
-        isMatchingTableQuestion,
-        isMatchingAnswer,
-        answerType: typeof answer
-      });
-
       if (isMatchingTableQuestion || isMatchingAnswer) {
-        log.info("Loading matching table answer", {
-          questionId: id,
-          answer
-        });
         let serializedAnswer;
 
         try {
@@ -502,11 +433,6 @@
         : answerInput.querySelector('input[type="text"], textarea');
 
       if (textInput) {
-        console.info("[OpenEdu SyncShare] Using regular text answer field", {
-          questionId: id,
-          inputId: textInput.id,
-          answerType: typeof answer
-        });
         answerStatus.textContent = "";
         textInput.value = typeof answer === "object"
           ? JSON.stringify(answer)
@@ -571,21 +497,17 @@
     wrapper.append(button, answerStatus, wrapperTarget);
 
     removeDuplicateAnswerButtons(questionInput, id);
-    log.info("Added answer button to question input", { questionId: id });
     return true;
   }
 
   function processQuestions(root) {
-    let processedProblems = 0;
-    let processedInputs = 0;
-
     function processElement(element) {
       // if (element.matches(questionGeneralSelector)) {
       //   if (wrapQuestionGeneral(element)) processedProblems++;
       // }
 
       if (element.matches(questionInputSelector)) {
-        if (AddAnswerButtonToQuestionInput(element)) processedInputs++;
+        AddAnswerButtonToQuestionInput(element);
       }
     }
 
@@ -598,29 +520,15 @@
         `${questionGeneralSelector}, ${questionInputSelector}`
       ).forEach(processElement);
     }
-
-    if (processedProblems || processedInputs) {
-      log.info("Processed questions", {
-        problems: processedProblems,
-        inputs: processedInputs
-      });
-    }
   }
 
-  function scanPage(reason) {
-    const questions = document.querySelectorAll(questionInputSelector);
-    log.debug("Scanning page", {
-      reason,
-      matches: questions.length,
-      ids: Array.from(questions).map(element => element.id)
-    });
-
+  function scanPage() {
     processQuestions(document);
 
     void requestAnswers();
   }
 
-  scanPage("initial");
+  scanPage();
 
   const answers = {};
 
@@ -669,12 +577,7 @@
       )
     ];
 
-    if (queries.length === 0) {
-      log.info("No questions found");
-      return;
-    }
-
-    log.info("Requesting answers", queries);
+    if (queries.length === 0) return;
 
     try {
       const result = await chrome.runtime.sendMessage({
