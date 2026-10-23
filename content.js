@@ -123,11 +123,43 @@
     return visibleAncestor || questionInput;
   }
 
-  function moveMatchingTableAnswerElements(answer, questionId) {
+  function findMatchingTableElement(matchingTable, elementId) {
+    if (matchingTable.id === elementId) {
+      return matchingTable;
+    }
+
+    const elements = Array.from(document.querySelectorAll("[id]"))
+      .filter(element => element.id === elementId);
+    const tables = Array.from(
+      document.querySelectorAll(matchingTableSelector)
+    );
+    const tableIndex = tables.indexOf(matchingTable);
+
+    if (tableIndex < 0) {
+      return null;
+    }
+
+    const elementInTable = elements.find(element =>
+      matchingTable.contains(element)
+    );
+
+    if (elementInTable) {
+      return elementInTable;
+    }
+
+    return elements[tableIndex] || null;
+  }
+
+  function moveMatchingTableAnswerElements(
+    answer,
+    questionId,
+    matchingTable
+  ) {
     const matchingAnswer = answer?.answer;
 
     log.info("Processing matching table element moves", {
       questionId,
+      matchingTableId: matchingTable?.id || null,
       answer,
       matchingAnswer
     });
@@ -144,12 +176,20 @@
       return;
     }
 
+    if (!matchingTable) {
+      log.warn("Matching table container not found; skipped element moves", {
+        questionId
+      });
+      return;
+    }
+
     Object.entries(matchingAnswer).forEach(([targetId, sourceIds]) => {
-      const targetElement = document.getElementById(targetId);
+      const targetElement = findMatchingTableElement(matchingTable, targetId);
 
       log.info("Matching table target lookup", {
         questionId,
         targetId,
+        matchingTableId: matchingTable?.id || null,
         targetFound: Boolean(targetElement),
         sourceIds
       });
@@ -164,12 +204,16 @@
 
       sourceIds.forEach(sourceId => {
         const sourceElementId = String(sourceId);
-        const sourceElement = document.getElementById(sourceElementId);
+        const sourceElement = findMatchingTableElement(
+          matchingTable,
+          sourceElementId
+        );
 
         log.info("Matching table source lookup", {
           questionId,
           targetId,
           sourceId: sourceElementId,
+          matchingTableId: matchingTable?.id || null,
           sourceFound: Boolean(sourceElement)
         });
 
@@ -280,11 +324,15 @@
 
     button.addEventListener("click", () => {
       const answer = answers[id];
+      const currentMatchingTable = questionInput.closest(matchingTableSelector);
+      const currentMatchingTableTarget = currentMatchingTable || (
+        matchingTableTarget?.isConnected ? matchingTableTarget : null
+      );
 
       console.info("[OpenEdu SyncShare] Answer button clicked", {
         questionId: id,
         isMatchingTableQuestion,
-        matchingTableId: matchingTableTarget?.id || null,
+        matchingTableId: currentMatchingTableTarget?.id || null,
         answer
       });
 
@@ -323,7 +371,7 @@
           return;
         }
 
-        const answerContainer = matchingTableTarget || questionInput;
+        const answerContainer = currentMatchingTableTarget || questionInput;
         const answerField = answerContainer.matches("input, textarea")
           ? answerContainer
           : answerContainer.querySelector(
@@ -342,7 +390,14 @@
         answerField.value = serializedAnswer;
         answerField.dispatchEvent(new Event("input", { bubbles: true }));
         answerField.dispatchEvent(new Event("change", { bubbles: true }));
-        moveMatchingTableAnswerElements(answer, id);
+        const updatedMatchingTable = wrapper.querySelector(
+          matchingTableSelector
+        ) || currentMatchingTableTarget;
+        moveMatchingTableAnswerElements(
+          answer,
+          id,
+          updatedMatchingTable
+        );
         return;
       }
 
