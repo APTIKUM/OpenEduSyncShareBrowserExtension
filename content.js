@@ -370,7 +370,6 @@
     )
       ? wrapperTarget
       : matchingTable;
-    const isMatchingTableQuestion = Boolean(matchingTableTarget);
 
     wrapper.className = "openedu-question-wrapper input";
     wrapper.dataset.questionId = id;
@@ -392,6 +391,9 @@
       const currentMatchingTableTarget = currentMatchingTable || (
         matchingTableTarget?.isConnected ? matchingTableTarget : null
       );
+      const isCurrentMatchingTableQuestion = Boolean(
+        currentMatchingTableTarget
+      );
 
       if (answer == null) {
         answerStatus.textContent = "Ответ не найден :(";
@@ -399,7 +401,11 @@
         return;
       }
 
-      if (isMatchingTableQuestion) {
+      const isMatchingAnswer = answer?.answer &&
+        typeof answer.answer === "object" &&
+        !Array.isArray(answer.answer);
+
+      if (isCurrentMatchingTableQuestion && isMatchingAnswer) {
         let serializedAnswer;
 
         try {
