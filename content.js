@@ -454,6 +454,37 @@
       }
 
       const answerInput = getAnswerInput(questionInput, id);
+      const selectInput = answerInput.matches("select")
+        ? answerInput
+        : answerInput.querySelector("select");
+
+      if (selectInput) {
+        const selectedValues = new Set(
+          Array.isArray(answer)
+            ? answer.map(value => String(value))
+            : [String(answer)]
+        );
+        const matchingOptions = Array.from(selectInput.options)
+          .filter(option => selectedValues.has(option.value));
+
+        if (matchingOptions.length === 0) {
+          log.warn("Select answer option not found", {
+            questionId: id,
+            answer
+          });
+          return;
+        }
+
+        for (const option of selectInput.options) {
+          option.selected = selectedValues.has(option.value);
+        }
+
+        answerStatus.textContent = "";
+        selectInput.dispatchEvent(new Event("input", { bubbles: true }));
+        selectInput.dispatchEvent(new Event("change", { bubbles: true }));
+        return;
+      }
+
       const textInput = answerInput.matches('input[type="text"], textarea')
         ? answerInput
         : answerInput.querySelector('input[type="text"], textarea');
@@ -512,7 +543,7 @@
         return;
       }
 
-      log.warn("Text, radio, or checkbox answer input not found", {
+      log.warn("Text, select, radio, or checkbox answer input not found", {
         questionId: id
       });
     });
