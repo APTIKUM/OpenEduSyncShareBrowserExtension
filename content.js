@@ -180,7 +180,7 @@
       log.warn("Matching table container not found; skipped element moves", {
         questionId
       });
-      return;
+      return false;
     }
 
     Object.entries(matchingAnswer).forEach(([targetId, sourceIds]) => {
@@ -253,6 +253,8 @@
         });
       });
     });
+
+    return true;
   }
 
   function wrapQuestionGeneral(question) {
@@ -324,6 +326,7 @@
 
     button.addEventListener("click", () => {
       const answer = answers[id];
+      answerStatus.classList.remove("openedu-answer-status-warning");
       const currentMatchingTable = questionInput.closest(matchingTableSelector);
       const currentMatchingTableTarget = currentMatchingTable || (
         matchingTableTarget?.isConnected ? matchingTableTarget : null
@@ -393,11 +396,18 @@
         const updatedMatchingTable = wrapper.querySelector(
           matchingTableSelector
         ) || currentMatchingTableTarget;
-        moveMatchingTableAnswerElements(
+        const elementsMoved = moveMatchingTableAnswerElements(
           answer,
           id,
           updatedMatchingTable
         );
+
+        if (elementsMoved === false) {
+          answerStatus.hidden = false;
+          answerStatus.classList.add("openedu-answer-status-warning");
+          answerStatus.textContent =
+            'Произошла ошибка с визуализацией ответов. Попробуйте нажать кнопку "Отправить" — ответы должны появиться.';
+        }
         return;
       }
 

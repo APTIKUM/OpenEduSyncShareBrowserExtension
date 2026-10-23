@@ -30,3 +30,7 @@
   color: #b91c1c;
   font: 600 15px/18px sans-serif;
 }
+
+.openedu-answer-status-warning {
+  color: #ca8a04;
+}
