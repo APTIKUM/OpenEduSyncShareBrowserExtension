@@ -258,7 +258,7 @@
         questionId,
         answer
       });
-      return;
+      return false;
     }
 
     if (!matchingTable) {
@@ -268,7 +268,7 @@
       return false;
     }
 
-    Object.entries(matchingAnswer).forEach(([targetId, sourceIds]) => {
+    for (const [targetId, sourceIds] of Object.entries(matchingAnswer)) {
       const targetElement = findMatchingTableElement(matchingTable, targetId);
 
       if (!targetElement || !Array.isArray(sourceIds)) {
@@ -276,10 +276,10 @@
           questionId,
           targetId
         });
-        return;
+        return false;
       }
 
-      sourceIds.forEach(sourceId => {
+      for (const sourceId of sourceIds) {
         const sourceElementId = String(sourceId);
         const sourceElement = findMatchingTableElement(
           matchingTable,
@@ -292,7 +292,7 @@
             targetId,
             sourceId: sourceElementId
           });
-          return;
+          return false;
         }
 
         if (
@@ -304,12 +304,12 @@
             targetId,
             sourceId: sourceElementId
           });
-          return;
+          return false;
         }
 
         targetElement.append(sourceElement);
-      });
-    });
+      }
+    }
 
     return true;
   }
@@ -446,7 +446,9 @@
           answerStatus.hidden = false;
           answerStatus.classList.add("openedu-answer-status-warning");
           answerStatus.textContent =
-            'Произошла ошибка с визуализацией ответов. Попробуйте нажать кнопку "Отправить" — ответы должны появиться.';
+            'Не удалось визуализировать ответы. Попробуйте нажать кнопку "Отправить" — ответы должны появиться :)';
+        } else {
+          answerStatus.hidden = true;
         }
         return;
       }
